@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — Time for a Break!</title>
+<style>
+  :root { --navy:#1E3A47;--teal:#2D4E61;--mid:#5C7A88;--orange:#E8850A;--sand:#EEF2F4;--white:#fff;--red:#e74c3c; }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Segoe UI',sans-serif;background:#f0f4f7;color:var(--navy);}
+  header{background:var(--navy);color:white;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;}
+  header h1{font-size:1.2rem;font-weight:600;}
+  header span{font-size:0.8rem;color:rgba(255,255,255,0.6);}
+  .back-link{color:rgba(255,255,255,0.7);text-decoration:none;font-size:0.82rem;}
+  .back-link:hover{color:var(--orange);}
+  .tabs{display:flex;background:var(--white);border-bottom:2px solid var(--sand);padding:0 2rem;}
+  .tab{padding:1rem 1.5rem;cursor:pointer;font-size:0.88rem;font-weight:500;color:var(--mid);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all 0.2s;white-space:nowrap;}
+  .tab:hover{color:var(--navy);}
+  .tab.active{color:var(--orange);border-bottom-color:var(--orange);}
+  .content{max-width:900px;margin:2rem auto;padding:0 1.5rem 4rem;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .card{background:var(--white);border-radius:10px;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 8px rgba(30,58,71,0.08);}
+  .card h2{font-size:1rem;font-weight:600;color:var(--navy);margin-bottom:1.2rem;display:flex;align-items:center;gap:0.5rem;}
+  .card h3{font-size:0.88rem;font-weight:600;color:var(--mid);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.8rem;margin-top:1.2rem;}
+  label{display:block;font-size:0.82rem;font-weight:500;color:var(--mid);margin-bottom:0.3rem;margin-top:0.8rem;}
+  input[type="text"],input[type="number"],input[type="time"],input[type="url"],textarea,select{width:100%;padding:0.6rem 0.8rem;border:1px solid #d0dce4;border-radius:6px;font-family:inherit;font-size:0.88rem;color:var(--navy);transition:border-color 0.2s;}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--orange);}
+  textarea{resize:vertical;min-height:80px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
+  .btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.65rem 1.4rem;border:none;border-radius:6px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.2s;}
+  .btn-primary{background:var(--orange);color:white;}
+  .btn-primary:hover{background:#C97008;transform:translateY(-1px);}
+  .btn-secondary{background:var(--sand);color:var(--navy);}
+  .btn-secondary:hover{background:#d8e4ea;}
+  .cal-wrap{margin-top:0.8rem;}
+  .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;}
+  .cal-title{font-weight:600;font-size:0.95rem;}
+  .cal-nav-btn{background:var(--sand);border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:0.9rem;transition:background 0.2s;}
+  .cal-nav-btn:hover{background:#d0dce4;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+  .cal-day-name{text-align:center;font-size:0.65rem;font-weight:600;color:var(--mid);padding:0.3rem 0;text-transform:uppercase;}
+  .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:0.8rem;border-radius:6px;cursor:pointer;border:1px solid transparent;transition:all 0.15s;}
+  .cal-day:hover:not(.empty):not(.past){background:var(--sand);}
+  .cal-day.empty{cursor:default;}
+  .cal-day.past{color:#ccc;cursor:not-allowed;}
+  .cal-day.today{background:var(--navy);color:white;font-weight:700;}
+  .cal-day.booked{background:#fde8e8;color:var(--red);border-color:#fbd0d0;font-weight:600;}
+  .cal-legend{display:flex;gap:1.2rem;margin-top:0.8rem;font-size:0.75rem;color:var(--mid);}
+  .cal-legend span{display:flex;align-items:center;gap:0.3rem;}
+  .leg{width:12px;height:12px;border-radius:3px;}
+  .photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.8rem;margin-top:0.8rem;}
+  .photo-item{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:4/3;background:var(--sand);border:2px solid transparent;cursor:grab;}
+  .photo-item.dragging{opacity:0.5;border-color:var(--orange);}
+  .photo-item.drag-over{border-color:var(--orange);border-style:dashed;}
+  .photo-item img{width:100%;height:100%;object-fit:cover;}
+  .photo-item .photo-label{position:absolute;bottom:0;left:0;right:0;background:rgba(30,58,71,0.75);color:white;font-size:0.65rem;padding:0.3rem 0.5rem;}
+  .photo-item .photo-del{position:absolute;top:0.3rem;right:0.3rem;background:rgba(231,76,60,0.9);color:white;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:0.75rem;display:flex;align-items:center;justify-content:center;}
+  .photo-item .photo-num{position:absolute;top:0.3rem;left:0.3rem;background:rgba(30,58,71,0.75);color:white;font-size:0.65rem;font-weight:700;padding:0.15rem 0.4rem;border-radius:10px;}
+  .photo-upload{border:2px dashed #d0dce4;border-radius:8px;padding:1.5rem;text-align:center;cursor:pointer;transition:all 0.2s;color:var(--mid);font-size:0.85rem;margin-top:0.8rem;}
+  .photo-upload:hover{border-color:var(--orange);color:var(--orange);background:#fff8f2;}
+  .photo-upload input{display:none;}
+  .drag-hint{font-size:0.75rem;color:var(--mid);margin-top:0.5rem;}
+  .instructions{background:#fff8f2;border:1px solid #fde0be;border-radius:8px;padding:1rem 1.2rem;font-size:0.82rem;color:#a05a00;line-height:1.6;margin-bottom:1.2rem;}
+  .instructions strong{color:var(--orange);}
+  .wa-preview{background:var(--sand);border-radius:6px;padding:0.6rem 0.9rem;font-size:0.82rem;color:var(--mid);margin-top:0.5rem;font-family:monospace;}
+  .ical-hint{font-size:0.78rem;color:var(--mid);margin-top:0.4rem;line-height:1.5;}
+  .ical-hint a{color:var(--orange);}
+  @media(max-width:600px){.tabs{overflow-x:auto;padding:0 1rem;}.row2,.row3{grid-template-columns:1fr;}.content{padding:0 1rem 3rem;}}
+
+  /* ── PASSWORD GATE ── */
+  .gate {
+    position: fixed; inset: 0;
+    background: #1E3A47;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 99999;
+  }
+  .gate.hidden { display: none !important; }
+  .gate-card {
+    background: white; border-radius: 16px; padding: 2.5rem;
+    width: 100%; max-width: 360px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .gate-logo { font-size: 1.4rem; font-weight: 700; color: #1E3A47; margin-bottom: 0.3rem; }
+  .gate-logo span { color: #E8850A; }
+  .gate-subtitle { font-size: 0.82rem; color: #5C7A88; margin-bottom: 1.8rem; }
+  .gate-input {
+    width: 100%; padding: 0.8rem 1rem;
+    border: 2px solid #d0dce4; border-radius: 8px;
+    font-size: 1rem; text-align: center;
+    letter-spacing: 0.2em; font-family: inherit; color: #1E3A47;
+    transition: border-color 0.2s; margin-bottom: 1rem;
+    box-sizing: border-box;
+  }
+  .gate-input:focus { outline: none; border-color: #E8850A; }
+  .gate-btn {
+    width: 100%; padding: 0.85rem;
+    background: #E8850A; color: white; border: none;
+    border-radius: 30px; font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: background 0.2s;
+  }
+  .gate-btn:hover { background: #C97008; }
+  .gate-error { font-size: 0.8rem; color: #e74c3c; margin-top: 0.8rem; display: none; }
+
+</style>
+</head>
+<body>
+<!-- PASSWORD GATE -->
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="gate-logo">Time for a Break<span>!</span></div>
+    <div class="gate-subtitle">Admin Panel — Owner access only</div>
+    <input type="password" class="gate-input" id="gate-pwd" placeholder="Enter password"
+      onkeydown="if(event.key==='Enter') checkPassword()">
+    <button class="gate-btn" onclick="checkPassword()">🔒 Enter</button>
+    <div class="gate-error" id="gate-error">Incorrect password. Try again.</div>
+  </div>
+</div>
+
+<div id="main-content" style="display:none;">
+<header>
+  <div><h1>&#9881;&#65039; Time for a Break! &#8212; Admin Panel</h1><span>Manage your properties without touching code</span></div>
+  <a href="timeforabreak.html" class="back-link">&#8592; View website</a>
+</header>
+<div class="tabs">
+  <div class="tab active" onclick="showTab('acantilados')">&#127968; Los Acantilados</div>
+  <div class="tab" onclick="showTab('buenosaires')">&#127749;&#65039; Buenos Aires</div>
+  <div class="tab" onclick="showTab('torrevieja')">&#127958;&#65039; Torrevieja</div>
+  <div class="tab" onclick="showTab('global')">&#127760; Global Settings</div>
+  <div class="tab" onclick="showTab('reservations')">&#128204; Reservations</div>
+</div>
+<div class="content">
+<div id="panel-acantilados" class="panel active">
+  <div class="instructions"><strong>How to use:</strong> Make your changes below, then click <strong>Generate Code</strong> to get the updated instructions. Copy and paste them to Claude to apply the changes.</div>
+  <div class="card">
+    <h2>&#x1F4B0; Price &amp; Availability</h2>
+    <div class="row2">
+      <div><label>Price per night</label><input type="number" id="ac-price" value="95" min="0"></div>
+      <div><label>Currency</label><select id="ac-currency"><option value="USD" selected>USD</option><option value="EUR">EUR</option><option value="ARS">ARS</option></select></div>
+    </div>
+    <div style="margin-top:1rem;">
+      <label>iCal feed URL (from Booking.com)</label>
+      <input type="url" id="ac-ical" value="https://ical.booking.com/v1/export?t=17d161f2-42c9-4a6c-9a4c-c4ed63062c06" placeholder="https://ical.booking.com/v1/export?t=...">
+      <p class="ical-hint">Find this in Booking.com &#8594; Calendar &#8594; Sync &#8594; Export. <a href="https://account.booking.com" target="_blank">Open Booking.com &#8599;</a></p>
+    </div>
+    <h3>Manual Booked Dates</h3>
+    <p style="font-size:0.8rem;color:var(--mid);margin-bottom:0.8rem;">Click dates to mark/unmark as booked.</p>
+    <div class="cal-wrap">
+      <div class="cal-header">
+        <button class="cal-nav-btn" onclick="calPrev('ac')">&#8249;</button>
+        <span class="cal-title" id="ac-cal-title"></span>
+        <button class="cal-nav-btn" onclick="calNext('ac')">&#8250;</button>
+      </div>
+      <div class="cal-grid" id="ac-cal-grid"></div>
+      <div class="cal-legend">
+        <span><span class="leg" style="background:var(--navy)"></span> Today</span>
+        <span><span class="leg" style="background:#fde8e8;border:1px solid var(--red)"></span> Booked</span>
+      </div>
+    </div>
+    <div style="margin-top:0.8rem;">
+      <label>Booked dates (comma-separated YYYY-MM-DD)</label>
+      <textarea id="ac-booked-dates" rows="3" placeholder="2026-07-01, 2026-07-02"></textarea>
+    </div>
+  </div>
+  <div class="card">
+    <h2>&#127968; House Rules</h2>
+    <div class="row3">
+      <div><label>Minimum nights</label><input type="number" id="ac-min-nights" value="3" min="1"></div>
+      <div><label>Check-in from</label><input type="time" id="ac-checkin" value="14:00"></div>
+      <div><label>Check-out before</label><input type="time" id="ac-checkout" value="10:00"></div>
+    </div>
+    <div class="row2" style="margin-top:0.5rem;">
+      <div><label>Max guests</label><input type="number" id="ac-guests" value="4" min="1"></div>
+      <div><label>Deposit required</label><input type="text" id="ac-deposit" value="50% at booking"></div>
+    </div>
+    <div style="margin-top:0.8rem;">
+      <label>Cancellation policy</label>
+      <textarea id="ac-cancellation" rows="2">2 weeks&#39; notice required before check-in to be eligible for a full refund.</textarea>
+    </div>
+  </div>
+  <div class="card">
+    <h2>&#128248; Photos</h2>
+    <p style="font-size:0.82rem;color:var(--mid);margin-bottom:0.5rem;">Drag photos to reorder. First photo = main gallery image.</p>
+    <div class="photo-grid" id="ac-photos"><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#127968;</div><div class="photo-num">1</div><div class="photo-label">Exterior</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('ac-photos')">&#10005;</button></div><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#128717;&#65039;</div><div class="photo-num">2</div><div class="photo-label">Living room</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('ac-photos')">&#10005;</button></div><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#128716;&#65039;</div><div class="photo-num">3</div><div class="photo-label">Master bedroom</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('ac-photos')">&#10005;</button></div><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#128716;&#65039;</div><div class="photo-num">4</div><div class="photo-label">Twin bedroom</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('ac-photos')">&#10005;</button></div><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#127859;</div><div class="photo-num">5</div><div class="photo-label">Kitchen & dining</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('ac-photos')">&#10005;</button></div></div>
+    <label class="photo-upload" onclick="document.getElementById('ac-upload').click()">
+      <input type="file" id="ac-upload" accept="image/*" multiple onchange="addPhotos('ac', this)">
+      &#128247; Click to upload new photos (JPG, PNG)
+    </label>
+    <p class="drag-hint">&#128161; Drag and drop to reorder. The first photo will be the main hero image.</p>
+  </div>
+  <div class="card">
+    <h2>&#128203; Generate Update Instructions</h2>
+    <p style="font-size:0.85rem;color:var(--mid);margin-bottom:1rem;">Click below to generate a summary of your changes. Copy it and paste it to Claude to apply the updates automatically.</p>
+    <button class="btn btn-primary" onclick="generateCode('acantilados')">&#9889; Generate update instructions</button>
+    <div id="ac-output" style="margin-top:1rem;display:none;">
+      <label>Copy this and send it to Claude:</label>
+      <textarea id="ac-code" rows="12" style="font-family:monospace;font-size:0.78rem;background:#f8fafc;" readonly></textarea>
+      <button class="btn btn-secondary" onclick="copyCode('ac-code')" style="margin-top:0.5rem;">&#128203; Copy to clipboard</button>
+      <span id="ac-copy-confirm" style="font-size:0.78rem;color:#1a8a4a;margin-left:0.5rem;display:none;">&#10003; Copied!</span>
+    </div>
+  </div>
+</div>
+<div id="panel-buenosaires" class="panel">
+  <div class="instructions"><strong>How to use:</strong> Make your changes below, then click <strong>Generate Code</strong> to get the updated instructions. Copy and paste them to Claude to apply the changes.</div>
+  <div class="card">
+    <h2>&#x1F4B0; Price &amp; Availability</h2>
+    <div class="row2">
+      <div><label>Price per night</label><input type="number" id="ba-price" value="65" min="0"></div>
+      <div><label>Currency</label><select id="ba-currency"><option value="USD" selected>USD</option><option value="EUR">EUR</option><option value="ARS">ARS</option></select></div>
+    </div>
+    <div style="margin-top:1rem;">
+      <label>iCal feed URL (from Booking.com)</label>
+      <input type="url" id="ba-ical" value="https://ical.booking.com/v1/export?t=ed615df8-73aa-4364-8fad-7839d69de0f6" placeholder="https://ical.booking.com/v1/export?t=...">
+      <p class="ical-hint">Find this in Booking.com &#8594; Calendar &#8594; Sync &#8594; Export.</p>
+    </div>
+    <h3>Manual Booked Dates</h3>
+    <p style="font-size:0.8rem;color:var(--mid);margin-bottom:0.8rem;">Click dates to mark/unmark as booked.</p>
+    <div class="cal-wrap">
+      <div class="cal-header">
+        <button class="cal-nav-btn" onclick="calPrev('ba')">&#8249;</button>
+        <span class="cal-title" id="ba-cal-title"></span>
+        <button class="cal-nav-btn" onclick="calNext('ba')">&#8250;</button>
+      </div>
+      <div class="cal-grid" id="ba-cal-grid"></div>
+      <div class="cal-legend">
+        <span><span class="leg" style="background:var(--navy)"></span> Today</span>
+        <span><span class="leg" style="background:#fde8e8;border:1px solid var(--red)"></span> Booked</span>
+      </div>
+    </div>
+    <div style="margin-top:0.8rem;">
+      <label>Booked dates (comma-separated YYYY-MM-DD)</label>
+      <textarea id="ba-booked-dates" rows="3" placeholder="2026-07-01, 2026-07-02"></textarea>
+    </div>
+  </div>
+  <div class="card">
+    <h2>&#127968; House Rules</h2>
+    <div class="row3">
+      <div><label>Minimum nights</label><input type="number" id="ba-min-nights" value="3" min="1"></div>
+      <div><label>Check-in from</label><input type="time" id="ba-checkin" value="14:00"></div>
+      <div><label>Check-out before</label><input type="time" id="ba-checkout" value="10:00"></div>
+    </div>
+    <div class="row2" style="margin-top:0.5rem;">
+      <div><label>Max guests</label><input type="number" id="ba-guests" value="3" min="1"></div>
+      <div><label>Deposit required</label><input type="text" id="ba-deposit" value="50% at booking"></div>
+    </div>
+    <div style="margin-top:0.8rem;">
+      <label>Cancellation policy</label>
+      <textarea id="ba-cancellation" rows="2">2 weeks&#39; notice required before check-in to be eligible for a full refund.</textarea>
+    </div>
+  </div>
+  <div class="card">
+    <h2>&#128248; Photos</h2>
+    <p style="font-size:0.82rem;color:var(--mid);margin-bottom:0.5rem;">Drag photos to reorder. First photo = main gallery image.</p>
+    <div class="photo-grid" id="ba-photos"><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#127970;</div><div class="photo-num">1</div><div class="photo-label">Exterior 670</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('ba-photos')">&#10005;</button></div><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#128717;&#65039;</div><div class="photo-num">2</div><div class="photo-label">Living area</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('ba-photos')">&#10005;</button></div><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#128716;&#65039;</div><div class="photo-num">3</div><div class="photo-label">Bedroom</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('ba-photos')">&#10005;</button></div><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#127859;</div><div class="photo-num">4</div><div class="photo-label">Kitchen</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('ba-photos')">&#10005;</button></div><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#127946;</div><div class="photo-num">5</div><div class="photo-label">Rooftop pool</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('ba-photos')">&#10005;</button></div></div>
+    <label class="photo-upload" onclick="document.getElementById('ba-upload').click()">
+      <input type="file" id="ba-upload" accept="image/*" multiple onchange="addPhotos('ba', this)">
+      &#128247; Click to upload new photos (JPG, PNG)
+    </label>
+    <p class="drag-hint">&#128161; Drag and drop to reorder. The first photo will be the main hero image.</p>
+  </div>
+  <div class="card">
+    <h2>&#128203; Generate Update Instructions</h2>
+    <p style="font-size:0.85rem;color:var(--mid);margin-bottom:1rem;">Click below to generate a summary of your changes. Copy it and paste it to Claude to apply the updates automatically.</p>
+    <button class="btn btn-primary" onclick="generateCode('buenosaires')">&#9889; Generate update instructions</button>
+    <div id="ba-output" style="margin-top:1rem;display:none;">
+      <label>Copy this and send it to Claude:</label>
+      <textarea id="ba-code" rows="12" style="font-family:monospace;font-size:0.78rem;background:#f8fafc;" readonly></textarea>
+      <button class="btn btn-secondary" onclick="copyCode('ba-code')" style="margin-top:0.5rem;">&#128203; Copy to clipboard</button>
+      <span id="ba-copy-confirm" style="font-size:0.78rem;color:#1a8a4a;margin-left:0.5rem;display:none;">&#10003; Copied!</span>
+    </div>
+  </div>
+</div>
+<div id="panel-torrevieja" class="panel">
+  <div class="instructions"><strong>How to use:</strong> Make your changes below, then click <strong>Generate Code</strong> to get the updated instructions. Copy and paste them to Claude to apply the changes.</div>
+  <div class="card">
+    <h2>&#x1F4B0; Price &amp; Availability</h2>
+    <div class="row2">
+      <div><label>Price per night</label><input type="number" id="tv-price" value="100" min="0"></div>
+      <div><label>Currency</label><select id="tv-currency"><option value="USD" selected>USD</option><option value="EUR">EUR</option><option value="ARS">ARS</option></select></div>
+    </div>
+    <div style="margin-top:1rem;">
+      <label>iCal feed URL (from Booking.com)</label>
+      <input type="url" id="tv-ical" value="" placeholder="https://ical.booking.com/v1/export?t=...">
+      <p class="ical-hint">Not yet added. Find in Booking.com &#8594; Calendar &#8594; Sync &#8594; Export when ready.</p>
+    </div>
+    <h3>Manual Booked Dates</h3>
+    <p style="font-size:0.8rem;color:var(--mid);margin-bottom:0.8rem;">Click dates to mark/unmark as booked.</p>
+    <div class="cal-wrap">
+      <div class="cal-header">
+        <button class="cal-nav-btn" onclick="calPrev('tv')">&#8249;</button>
+        <span class="cal-title" id="tv-cal-title"></span>
+        <button class="cal-nav-btn" onclick="calNext('tv')">&#8250;</button>
+      </div>
+      <div class="cal-grid" id="tv-cal-grid"></div>
+      <div class="cal-legend">
+        <span><span class="leg" style="background:var(--navy)"></span> Today</span>
+        <span><span class="leg" style="background:#fde8e8;border:1px solid var(--red)"></span> Booked</span>
+      </div>
+    </div>
+    <div style="margin-top:0.8rem;">
+      <label>Booked dates (comma-separated YYYY-MM-DD)</label>
+      <textarea id="tv-booked-dates" rows="3" placeholder="2026-07-01, 2026-07-02"></textarea>
+    </div>
+  </div>
+  <div class="card">
+    <h2>&#127968; House Rules</h2>
+    <div class="row3">
+      <div><label>Minimum nights</label><input type="number" id="tv-min-nights" value="3" min="1"></div>
+      <div><label>Check-in from</label><input type="time" id="tv-checkin" value="14:00"></div>
+      <div><label>Check-out before</label><input type="time" id="tv-checkout" value="10:00"></div>
+    </div>
+    <div class="row2" style="margin-top:0.5rem;">
+      <div><label>Max guests</label><input type="number" id="tv-guests" value="4" min="1"></div>
+      <div><label>Deposit required</label><input type="text" id="tv-deposit" value="50% at booking"></div>
+    </div>
+    <div style="margin-top:0.8rem;">
+      <label>Cancellation policy</label>
+      <textarea id="tv-cancellation" rows="2">2 weeks&#39; notice required before check-in to be eligible for a full refund.</textarea>
+    </div>
+  </div>
+  <div class="card">
+    <h2>&#128248; Photos</h2>
+    <p style="font-size:0.82rem;color:var(--mid);margin-bottom:0.5rem;">Drag photos to reorder. First photo = main gallery image.</p>
+    <div class="photo-grid" id="tv-photos"><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#127796;</div><div class="photo-num">1</div><div class="photo-label">Exterior / Palm tree</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('tv-photos')">&#10005;</button></div><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#127774;</div><div class="photo-num">2</div><div class="photo-label">Roof terrace</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('tv-photos')">&#10005;</button></div><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#128717;&#65039;</div><div class="photo-num">3</div><div class="photo-label">Living & kitchen</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('tv-photos')">&#10005;</button></div><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#128716;&#65039;</div><div class="photo-num">4</div><div class="photo-label">Bedroom</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('tv-photos')">&#10005;</button></div><div class="photo-item" draggable="true"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#e8f0f5;font-size:1.8rem;">&#127958;&#65039;</div><div class="photo-num">5</div><div class="photo-label">Terrace panoramic</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('tv-photos')">&#10005;</button></div></div>
+    <label class="photo-upload" onclick="document.getElementById('tv-upload').click()">
+      <input type="file" id="tv-upload" accept="image/*" multiple onchange="addPhotos('tv', this)">
+      &#128247; Click to upload new photos (JPG, PNG)
+    </label>
+    <p class="drag-hint">&#128161; Drag and drop to reorder. The first photo will be the main hero image.</p>
+  </div>
+  <div class="card">
+    <h2>&#128203; Generate Update Instructions</h2>
+    <p style="font-size:0.85rem;color:var(--mid);margin-bottom:1rem;">Click below to generate a summary of your changes. Copy it and paste it to Claude to apply the updates automatically.</p>
+    <button class="btn btn-primary" onclick="generateCode('torrevieja')">&#9889; Generate update instructions</button>
+    <div id="tv-output" style="margin-top:1rem;display:none;">
+      <label>Copy this and send it to Claude:</label>
+      <textarea id="tv-code" rows="12" style="font-family:monospace;font-size:0.78rem;background:#f8fafc;" readonly></textarea>
+      <button class="btn btn-secondary" onclick="copyCode('tv-code')" style="margin-top:0.5rem;">&#128203; Copy to clipboard</button>
+      <span id="tv-copy-confirm" style="font-size:0.78rem;color:#1a8a4a;margin-left:0.5rem;display:none;">&#10003; Copied!</span>
+    </div>
+  </div>
+</div>
+<div id="panel-global" class="panel">
+  <div class="card">
+    <h2>&#128241; WhatsApp Numbers</h2>
+    <p style="font-size:0.82rem;color:var(--mid);margin-bottom:1rem;">Type your number and click <strong>Save</strong>. All property pages will use this number instantly — no Claude needed.<br>Format: country code + number, no + or spaces. E.g. Argentina: <code>5492235803560</code> &middot; Spain: <code>34612345678</code></p>
+
+    <div style="margin-bottom:1rem;">
+      <label>&#127968; Casa en Los Acantilados</label>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <input type="text" id="wa-acantilados" placeholder="5492235803560" style="flex:1;">
+        <button class="btn btn-primary" onclick="saveWA('acantilados')" style="white-space:nowrap;padding:0.6rem 1rem;">&#128190; Save</button>
+      </div>
+      <div class="wa-preview" id="wa-ac-preview">wa.me/...</div>
+      <div id="wa-ac-status" style="font-size:0.75rem;color:#1a8a4a;display:none;margin-top:0.3rem;">&#10003; Saved!</div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+      <label>&#127749;&#65039; Studio en Buenos Aires</label>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <input type="text" id="wa-buenosaires" placeholder="5491112345678" style="flex:1;">
+        <button class="btn btn-primary" onclick="saveWA('buenosaires')" style="white-space:nowrap;padding:0.6rem 1rem;">&#128190; Save</button>
+      </div>
+      <div class="wa-preview" id="wa-ba-preview">wa.me/...</div>
+      <div id="wa-ba-status" style="font-size:0.75rem;color:#1a8a4a;display:none;margin-top:0.3rem;">&#10003; Saved!</div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+      <label>&#127958;&#65039; Apartamento en Torrevieja</label>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <input type="text" id="wa-torrevieja" placeholder="34612345678" style="flex:1;">
+        <button class="btn btn-primary" onclick="saveWA('torrevieja')" style="white-space:nowrap;padding:0.6rem 1rem;">&#128190; Save</button>
+      </div>
+      <div class="wa-preview" id="wa-tv-preview">wa.me/...</div>
+      <div id="wa-tv-status" style="font-size:0.75rem;color:#1a8a4a;display:none;margin-top:0.3rem;">&#10003; Saved!</div>
+    </div>
+
+    <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--sand);">
+      <button class="btn btn-secondary" onclick="generateWACode()">&#128203; Also generate Claude instructions</button>
+      <div id="wa-output" style="margin-top:1rem;display:none;">
+        <label>Copy this and send it to Claude to also update the HTML files permanently:</label>
+        <textarea id="wa-code" rows="6" style="font-family:monospace;font-size:0.78rem;background:#f8fafc;" readonly></textarea>
+        <button class="btn btn-secondary" onclick="copyCode('wa-code')" style="margin-top:0.5rem;">&#128203; Copy</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>&#127760; Add a New Property</h2>
+    <p style="font-size:0.85rem;color:var(--mid);margin-bottom:1rem;">When ready to add a 4th property, fill in the details and Claude will build the page.</p>
+    <div class="row2">
+      <div><label>Property name</label><input type="text" id="new-name" placeholder="e.g. Casa en Mendoza"></div>
+      <div><label>Location</label><input type="text" id="new-location" placeholder="e.g. Mendoza, Argentina"></div>
+    </div>
+    <div class="row2">
+      <div><label>Price per night</label><input type="number" id="new-price" placeholder="95"></div>
+      <div><label>Type</label><select id="new-type"><option>House</option><option>Apartment</option><option>Studio</option><option>Villa</option></select></div>
+    </div>
+    <div style="margin-top:0.8rem;"><label>Description</label><textarea id="new-desc" placeholder="Describe the property..."></textarea></div>
+    <div style="margin-top:1rem;">
+      <button class="btn btn-primary" onclick="generateNewProperty()">&#9889; Generate instructions for Claude</button>
+      <div id="new-output" style="margin-top:1rem;display:none;">
+        <textarea id="new-code" rows="8" style="font-family:monospace;font-size:0.78rem;background:#f8fafc;" readonly></textarea>
+        <button class="btn btn-secondary" onclick="copyCode('new-code')" style="margin-top:0.5rem;">&#128203; Copy</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ═══ RESERVATIONS ═══ -->
+<div id="panel-reservations" class="panel">
+  <div id="res-stats" class="res-stats">
+    <div class="res-stat"><div class="res-stat-num" id="stat-total">0</div><div class="res-stat-label">Total requests</div></div>
+    <div class="res-stat"><div class="res-stat-num" id="stat-pending" style="color:var(--orange)">0</div><div class="res-stat-label">Pending</div></div>
+    <div class="res-stat"><div class="res-stat-num" id="stat-confirmed" style="color:#065f46">0</div><div class="res-stat-label">Confirmed</div></div>
+    <div class="res-stat"><div class="res-stat-num" id="stat-revenue" style="color:var(--navy)">USD 0</div><div class="res-stat-label">Estimated revenue</div></div>
+  </div>
+
+  <div class="export-bar">
+    <button class="btn btn-primary" onclick="exportCSV()">&#128229; Export to Excel / CSV</button>
+    <button class="btn btn-secondary" onclick="loadReservations()">&#8635; Refresh</button>
+    <select id="res-filter" onchange="loadReservations()" style="padding:0.5rem 0.8rem;border:1px solid #d0dce4;border-radius:6px;font-family:inherit;font-size:0.85rem;">
+      <option value="all">All properties</option>
+      <option value="Casa en Los Acantilados">Casa en Los Acantilados</option>
+      <option value="Studio en Buenos Aires">Studio en Buenos Aires</option>
+      <option value="Apartamento en Torrevieja">Apartamento en Torrevieja</option>
+    </select>
+    <select id="res-status-filter" onchange="loadReservations()" style="padding:0.5rem 0.8rem;border:1px solid #d0dce4;border-radius:6px;font-family:inherit;font-size:0.85rem;">
+      <option value="all">All statuses</option>
+      <option value="Pending">Pending</option>
+      <option value="Confirmed">Confirmed</option>
+      <option value="Cancelled">Cancelled</option>
+    </select>
+    <button class="btn" style="background:#fde8e8;color:var(--red);" onclick="clearAllReservations()">&#128465; Clear all</button>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="res-table-wrap">
+      <table class="res-table" id="res-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date received</th>
+            <th>Property</th>
+            <th>Guest name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Check-in</th>
+            <th>Check-out</th>
+            <th>Nights</th>
+            <th>Guests</th>
+            <th>Total price</th>
+            <th>Notes</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="res-tbody">
+          <tr><td colspan="14" class="res-empty">&#128204; No booking requests yet. They will appear here when guests submit the form.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+</div><!-- /main-content -->
+
+<script>
+
+  // ── PASSWORD GATE ──
+  // Change 'admin1234' below to your own password
+  const ADMIN_PASSWORD = 'Orion2000pulgadas';
+
+  function checkPassword() {
+    const input = document.getElementById('gate-pwd').value;
+    if (input === ADMIN_PASSWORD) {
+      document.getElementById('gate').classList.add('hidden');
+      document.getElementById('main-content').style.display = 'block';
+      sessionStorage.setItem('tfab_auth', '1');
+    } else {
+      document.getElementById('gate-error').style.display = 'block';
+      document.getElementById('gate-pwd').value = '';
+      document.getElementById('gate-pwd').focus();
+    }
+  }
+
+  // Auto-unlock if already authenticated this session
+  if (sessionStorage.getItem('tfab_auth') === '1') {
+    document.getElementById('gate').classList.add('hidden');
+    document.getElementById('main-content').style.display = 'block';
+  }
+
+  function showTab(name){const names=['acantilados','buenosaires','torrevieja','global','reservations'];document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',names[i]===name));document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.getElementById('panel-'+name).classList.add('active');}
+  const calState={ac:new Date(),ba:new Date(),tv:new Date()};
+  const bookedSets={ac:new Set(),ba:new Set(),tv:new Set()};
+  function renderCal(prefix){
+    const base=calState[prefix],y=base.getFullYear(),m=base.getMonth();
+    const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const days=['Mo','Tu','We','Th','Fr','Sa','Su'];
+    document.getElementById(prefix+'-cal-title').textContent=months[m]+' '+y;
+    const grid=document.getElementById(prefix+'-cal-grid');grid.innerHTML='';
+    days.forEach(d=>{const el=document.createElement('div');el.className='cal-day-name';el.textContent=d;grid.appendChild(el);});
+    const first=new Date(y,m,1).getDay(),offset=first===0?6:first-1;
+    for(let i=0;i<offset;i++){const el=document.createElement('div');el.className='cal-day empty';grid.appendChild(el);}
+    const dim=new Date(y,m+1,0).getDate(),today=new Date();
+    for(let d=1;d<=dim;d++){
+      const el=document.createElement('div');el.className='cal-day';el.textContent=d;
+      const key=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isPast=new Date(y,m,d)<new Date(today.getFullYear(),today.getMonth(),today.getDate());
+      if(isPast)el.classList.add('past');
+      else if(y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate())el.classList.add('today');
+      else if(bookedSets[prefix].has(key))el.classList.add('booked');
+      if(!isPast&&!(y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate())){
+        el.addEventListener('click',()=>{
+          if(bookedSets[prefix].has(key)){bookedSets[prefix].delete(key);el.classList.remove('booked');}
+          else{bookedSets[prefix].add(key);el.classList.add('booked');}
+          document.getElementById(prefix+'-booked-dates').value=[...bookedSets[prefix]].sort().join(', ');
+        });
+      }
+      grid.appendChild(el);
+    }
+  }
+  function calPrev(p){calState[p]=new Date(calState[p].getFullYear(),calState[p].getMonth()-1,1);renderCal(p);}
+  function calNext(p){calState[p]=new Date(calState[p].getFullYear(),calState[p].getMonth()+1,1);renderCal(p);}
+  ['ac','ba','tv'].forEach(p=>{
+    document.getElementById(p+'-booked-dates').addEventListener('input',function(){bookedSets[p].clear();this.value.split(',').map(d=>d.trim()).filter(Boolean).forEach(d=>bookedSets[p].add(d));renderCal(p);});
+    renderCal(p);
+  });
+  function initDrag(gridId){
+    const grid=document.getElementById(gridId);let dragged=null;
+    grid.addEventListener('dragstart',e=>{dragged=e.target.closest('.photo-item');dragged.classList.add('dragging');});
+    grid.addEventListener('dragend',()=>{dragged.classList.remove('dragging');renumberPhotos(gridId);});
+    grid.addEventListener('dragover',e=>{e.preventDefault();const over=e.target.closest('.photo-item');if(over&&over!==dragged){over.classList.add('drag-over');grid.insertBefore(dragged,over);}});
+    grid.addEventListener('dragleave',e=>{const item=e.target.closest('.photo-item');if(item)item.classList.remove('drag-over');});
+    grid.addEventListener('drop',e=>{e.preventDefault();grid.querySelectorAll('.photo-item').forEach(i=>i.classList.remove('drag-over'));});
+  }
+  function renumberPhotos(gridId){document.querySelectorAll(`#${gridId} .photo-num`).forEach((el,i)=>el.textContent=i+1);}
+  function addPhotos(prefix,input){
+    const grid=document.getElementById(prefix+'-photos');
+    Array.from(input.files).forEach(file=>{
+      const reader=new FileReader();
+      reader.onload=e=>{
+        const div=document.createElement('div');div.className='photo-item';div.draggable=true;
+        const num=grid.querySelectorAll('.photo-item').length+1;
+        div.innerHTML=`<img src="${e.target.result}" alt=""><div class="photo-num">${num}</div><div class="photo-label">${file.name.replace(/\.[^.]+$/,'')}</div><button class="photo-del" onclick="this.parentElement.remove();renumberPhotos('${prefix}-photos')">&#10005;</button>`;
+        grid.appendChild(div);initDrag(prefix+'-photos');
+      };reader.readAsDataURL(file);
+    });
+  }
+  ['ac','ba','tv'].forEach(p=>initDrag(p+'-photos'));
+  ['acantilados','buenosaires','torrevieja'].forEach(name=>{
+    const short=name==='acantilados'?'ac':name==='buenosaires'?'ba':'tv';
+    const input=document.getElementById('wa-'+name),preview=document.getElementById('wa-'+short+'-preview');
+    if(input&&preview)input.addEventListener('input',()=>{preview.textContent=input.value?`wa.me/${input.value}`:'wa.me/...';});
+  });
+  const propNames={acantilados:'Casa en Los Acantilados',buenosaires:'Studio en Buenos Aires',torrevieja:'Apartamento en Torrevieja'};
+  const fileNames={acantilados:'casa-acantilados.html',buenosaires:'studio-buenosaires.html',torrevieja:'apartamento-torrevieja.html'};
+  const prefixMap={acantilados:'ac',buenosaires:'ba',torrevieja:'tv'};
+  function generateCode(prop){
+    const p=prefixMap[prop];
+    const price=document.getElementById(p+'-price').value;
+    const currency=document.getElementById(p+'-currency').value;
+    const ical=document.getElementById(p+'-ical').value;
+    const minNights=document.getElementById(p+'-min-nights').value;
+    const checkin=document.getElementById(p+'-checkin').value;
+    const checkout=document.getElementById(p+'-checkout').value;
+    const guests=document.getElementById(p+'-guests').value;
+    const deposit=document.getElementById(p+'-deposit').value;
+    const cancellation=document.getElementById(p+'-cancellation').value;
+    const bookedDates=document.getElementById(p+'-booked-dates').value;
+    const code=`Please update ${propNames[prop]} (file: ${fileNames[prop]}) with these changes:\n\nPRICE:\n- Price per night: ${currency} ${price}\n\nICAL CALENDAR:\n- iCal URL: ${ical||'(not set)'}\n${bookedDates?`- Additional booked dates: ${bookedDates}`:''}\n\nHOUSE RULES:\n- Minimum stay: ${minNights} nights\n- Check-in: ${checkin} to 20:00\n- Check-out: before ${checkout}\n- Maximum guests: ${guests}\n- Deposit: ${deposit}\n- Cancellation: ${cancellation}\n\nPlease apply all these changes to the property page.`;
+    document.getElementById(p+'-output').style.display='block';
+    document.getElementById(p+'-code').value=code;
+  }
+  function generateWACode(){
+    const ac=document.getElementById('wa-acantilados').value;
+    const ba=document.getElementById('wa-buenosaires').value;
+    const tv=document.getElementById('wa-torrevieja').value;
+    const code=`Please update WhatsApp numbers across all files:\n\n- Casa en Los Acantilados: ${ac||'(unchanged)'}\n- Studio en Buenos Aires: ${ba||'(unchanged)'}\n- Apartamento en Torrevieja: ${tv||'(unchanged)'}\n- Also update CONFIG in timeforabreak.html\n\nReplace ACANTILADOS_NUMBER, BUENOSAIRES_NUMBER and TORREVIEJA_NUMBER placeholders.`;
+    document.getElementById('wa-output').style.display='block';
+    document.getElementById('wa-code').value=code;
+  }
+  function generateNewProperty(){
+    const name=document.getElementById('new-name').value;
+    const loc=document.getElementById('new-location').value;
+    const price=document.getElementById('new-price').value;
+    const type=document.getElementById('new-type').value;
+    const desc=document.getElementById('new-desc').value;
+    const code=`Please add a new property to the website:\n\nProperty name: ${name}\nLocation: ${loc}\nType: ${type}\nPrice per night: USD ${price}\nDescription: ${desc}\n\nPlease:\n1. Create a new property page (same Vayate-style layout)\n2. Add a card on the main page\n3. Link the card to the new property page`;
+    document.getElementById('new-output').style.display='block';
+    document.getElementById('new-code').value=code;
+  }
+  function copyCode(id){
+    navigator.clipboard.writeText(document.getElementById(id).value).then(()=>{
+      const prefix=id.split('-')[0];
+      const confirm=document.getElementById(prefix+'-copy-confirm');
+      if(confirm){confirm.style.display='inline';setTimeout(()=>confirm.style.display='none',2000);}
+    });
+  }
+
+  // ── RESERVATIONS DASHBOARD ──
+  function loadReservations() {
+    const all = JSON.parse(localStorage.getItem('tfab_reservations') || '[]');
+    const propFilter   = document.getElementById('res-filter')?.value || 'all';
+    const statusFilter = document.getElementById('res-status-filter')?.value || 'all';
+
+    let filtered = all.filter(r =>
+      (propFilter === 'all'   || r.property === propFilter) &&
+      (statusFilter === 'all' || r.status === statusFilter)
+    );
+
+    // Stats (always from all)
+    document.getElementById('stat-total').textContent     = all.length;
+    document.getElementById('stat-pending').textContent   = all.filter(r=>r.status==='Pending').length;
+    document.getElementById('stat-confirmed').textContent = all.filter(r=>r.status==='Confirmed').length;
+    const revenue = all.filter(r=>r.status!=='Cancelled').reduce((sum,r) => {
+      const n = parseFloat((r.totalPrice||'').replace(/[^0-9.]/g,'')) || 0;
+      return sum + n;
+    }, 0);
+    document.getElementById('stat-revenue').textContent = 'USD ' + revenue.toLocaleString();
+
+    const tbody = document.getElementById('res-tbody');
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="14" class="res-empty">&#128204; No reservations found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map((r, idx) => {
+      const globalIdx = all.indexOf(r);
+      const statusClass = r.status === 'Confirmed' ? 'status-confirmed' : r.status === 'Cancelled' ? 'status-cancelled' : 'status-pending';
+      return `<tr>
+        <td><strong>#${r.bookingNum}</strong></td>
+        <td>${r.dateReceived || '—'}</td>
+        <td style="white-space:nowrap">${r.property}</td>
+        <td><strong>${r.name}</strong></td>
+        <td><a href="mailto:${r.email}" style="color:var(--teal)">${r.email}</a></td>
+        <td>${r.phone || '—'}</td>
+        <td style="white-space:nowrap">${r.checkIn}</td>
+        <td style="white-space:nowrap">${r.checkOut}</td>
+        <td style="text-align:center">${r.nights}</td>
+        <td style="text-align:center">${r.guests}</td>
+        <td style="font-weight:700;color:var(--navy)">${r.totalPrice || '—'}</td>
+        <td style="max-width:150px;font-size:0.75rem;color:var(--mid)">${r.notes || '—'}</td>
+        <td><span class="status-badge ${statusClass}">${r.status}</span></td>
+        <td>
+          <div class="res-actions">
+            ${r.status !== 'Confirmed' ? `<button class="res-btn res-btn-confirm" onclick="updateStatus(${globalIdx},'Confirmed')">&#10003; Confirm</button>` : ''}
+            ${r.status !== 'Cancelled' ? `<button class="res-btn res-btn-cancel" onclick="updateStatus(${globalIdx},'Cancelled')">&#10007; Cancel</button>` : ''}
+            <button class="res-btn res-btn-delete" onclick="deleteReservation(${globalIdx})">&#128465;</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function updateStatus(idx, status) {
+    const all = JSON.parse(localStorage.getItem('tfab_reservations') || '[]');
+    if (all[idx]) { all[idx].status = status; localStorage.setItem('tfab_reservations', JSON.stringify(all)); loadReservations(); }
+  }
+
+  function deleteReservation(idx) {
+    if (!confirm('Delete this reservation?')) return;
+    const all = JSON.parse(localStorage.getItem('tfab_reservations') || '[]');
+    all.splice(idx, 1);
+    localStorage.setItem('tfab_reservations', JSON.stringify(all));
+    loadReservations();
+  }
+
+  function clearAllReservations() {
+    if (!confirm('Clear ALL reservations? This cannot be undone.')) return;
+    localStorage.removeItem('tfab_reservations');
+    loadReservations();
+  }
+
+  function exportCSV() {
+    const all = JSON.parse(localStorage.getItem('tfab_reservations') || '[]');
+    if (all.length === 0) { alert('No reservations to export.'); return; }
+    const headers = ['Booking #','Date Received','Property','Guest Name','Email','Phone','Check-in','Check-out','Nights','Guests','Total Price','Notes','Status'];
+    const rows = all.map(r => [r.bookingNum, r.dateReceived, r.property, r.name, r.email, r.phone, r.checkIn, r.checkOut, r.nights, r.guests, r.totalPrice, r.notes, r.status]);
+    const csv = [headers, ...rows].map(row => row.map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = 'timeforabreak-reservations-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  // Auto-load when tab opens
+  const origShowTab = showTab;
+  // Override showTab to load reservations when that tab is opened
+  window.showTab = function(name) {
+    const names=['acantilados','buenosaires','torrevieja','global','reservations'];
+    document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',names[i]===name));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById('panel-'+name).classList.add('active');
+    if (name === 'reservations') loadReservations();
+  };
+
+</script>
+</body>
+</html>
