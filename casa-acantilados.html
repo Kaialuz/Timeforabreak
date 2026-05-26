@@ -241,21 +241,49 @@
   .btn-request:hover { background: var(--teal); transform: translateY(-1px); }
   @media(max-width:480px) { .form-row { grid-template-columns: 1fr; } }
   @media(max-width:900px){
-    .prop-header{padding:1rem 1.2rem;}
-    .gallery-wrap{padding:0 1.2rem;}
-    .prop-header-right{text-align:left;}
     nav{padding:0.9rem 1.2rem;}
     .breadcrumb{padding:0.7rem 1.2rem;}
-    .gallery{grid-template-columns:1fr;grid-template-rows:260px;}
-    .gallery-right{display:none;}
-    .page-wrap{grid-template-columns:1fr;padding:1.5rem 1.2rem;gap:2rem;}
+    .prop-header{padding:1rem 1.2rem;gap:0.8rem;}
+    .prop-header-right{text-align:left;}
+    .gallery-wrap{padding:0;}
+    .gallery{
+      display:flex;
+      flex-direction:row;
+      overflow-x:auto;
+      overflow-y:hidden;
+      height:260px;
+      gap:4px;
+      scroll-snap-type:x mandatory;
+      -webkit-overflow-scrolling:touch;
+      padding:0 1.2rem;
+    }
+    .gallery-main{
+      flex:0 0 85vw;
+      height:260px;
+      scroll-snap-align:start;
+      border-radius:8px;
+    }
+    .gallery-right{
+      display:flex;
+      flex-direction:row;
+      gap:4px;
+      flex-shrink:0;
+    }
+    .gallery-thumb{
+      flex:0 0 60vw;
+      height:260px;
+      scroll-snap-align:start;
+      border-radius:8px;
+    }
+    .show-all-btn{font-size:0.72rem;padding:0.3rem 0.7rem;}
+    .page-wrap{grid-template-columns:1fr;padding:1.5rem 1.2rem;gap:2rem;margin-top:1rem;}
     .booking-card{position:static;}
     .cal-two-col{grid-template-columns:1fr;}
     .review-cards{grid-template-columns:1fr;}
     .amenities-cols{grid-template-columns:1fr 1fr;}
-  }
+    .things-grid{grid-template-columns:1fr;gap:1.5rem;}
   @media(max-width:480px){
-    .prop-title{font-size:1.6rem;}
+    .prop-title{font-size:1.6rem;} .prop-score-row{flex-wrap:wrap;gap:0.4rem;} .prop-header{gap:0.8rem;}
     .amenities-cols{grid-template-columns:1fr;}
     .amenities-featured{gap:1.5rem;}
   }
@@ -279,8 +307,70 @@
   html[data-lang="es"] span[data-en] { display: none !important; }
   html[data-lang="es"] p[data-en] { display: none !important; }
   html[data-lang="es"] div[data-en] { display: none !important; }
+
+  .cal-day.selected-start { background: var(--orange) !important; color: white !important; font-weight: 700; border-radius: 50% 0 0 50%; }
+  .cal-day.selected-end   { background: var(--orange) !important; color: white !important; font-weight: 700; border-radius: 0 50% 50% 0; }
+  .cal-day.selected-range { background: #fde8cc !important; color: var(--navy) !important; border-radius: 0; }
+  .cal-day.selected-start.selected-end { border-radius: 50%; }
 </style>
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script src="https://www.google.com/recaptcha/api.js" async defer>
+  function highlightCalendarRange() {
+    var ciEl = document.getElementById('bf-checkin');
+    var coEl = document.getElementById('bf-checkout');
+    var ci = ciEl ? ciEl.value : '';
+    var co = coEl ? coEl.value : '';
+
+    // Remove all previous selection classes
+    document.querySelectorAll('.cal-day').forEach(function(d) {
+      d.classList.remove('selected-start', 'selected-end', 'selected-range');
+    });
+
+    if (!ci) return;
+
+    // Highlight all calendar day elements
+    document.querySelectorAll('.cal-day').forEach(function(el) {
+      var txt = el.textContent.trim();
+      if (!txt || el.classList.contains('empty') || el.classList.contains('past')) return;
+
+      // Find the grid this day belongs to
+      var grid = el.closest('.cal-grid');
+      if (!grid) return;
+      var titleEl = grid.closest('.cal-month-block')?.querySelector('.cal-month-title');
+      if (!titleEl) return;
+
+      var titleParts = titleEl.textContent.split(' ');
+      var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      var monthIdx = monthNames.indexOf(titleParts[0]);
+      // Also check Spanish
+      if (monthIdx === -1) {
+        var monthNamesEs = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        monthIdx = monthNamesEs.indexOf(titleParts[0]);
+      }
+      var year = parseInt(titleParts[1]);
+      if (monthIdx === -1 || isNaN(year)) return;
+
+      var day = parseInt(txt);
+      var key = year + '-' + String(monthIdx+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+
+      if (key === ci && key === co) {
+        el.classList.add('selected-start', 'selected-end');
+      } else if (key === ci) {
+        el.classList.add('selected-start');
+      } else if (key === co) {
+        el.classList.add('selected-end');
+      } else if (ci && co && key > ci && key < co) {
+        el.classList.add('selected-range');
+      }
+    });
+  }
+
+  // Re-highlight when calendar month changes
+  var origChangeMonth = changeMonth;
+  changeMonth = function(dir) {
+    origChangeMonth(dir);
+    setTimeout(highlightCalendarRange, 50);
+  };
+</script>
 </head>
 <body>
 
@@ -420,6 +510,7 @@
       <div class="cal-legend">
         <span><span class="leg-dot" style="background:var(--orange)"></span> <span data-en>Today</span><span data-es>Hoy</span></span>
         <span><span class="leg-dot" style="background:#ddd"></span> <span data-en>Booked</span><span data-es>Ocupado</span></span>
+        <span><span class="leg-dot" style="background:var(--orange)"></span> <span data-en>Your selection</span><span data-es>Tu selección</span></span>
       </div>
     </div>
 
@@ -538,7 +629,7 @@
         &#128204; <span data-en>Request to Book</span><span data-es>Solicitar Reserva</span>
       </button>
       <a href="https://wa.me/549223803560" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:0.4rem;width:100%;padding:0.75rem;background:#25D366;color:white;border:none;border-radius:30px;font-size:0.88rem;font-family:inherit;font-weight:600;text-decoration:none;margin-bottom:0.6rem;transition:background 0.2s;">💬 <span data-en>WhatsApp us</span><span data-es>Escribinos por WhatsApp</span></a>
-      <p class="card-note"><span data-en>We typically reply within 3 hours · 7 days a week</span><span data-es>Respondemos en menos de 3 horas · Los 7 días</span></p>
+      <p class="card-note"><span data-en>We typically reply within 24 hours · 7 days a week</span><span data-es>Respondemos en menos de 24 horas · Los 7 días</span></p>
       <p class="card-direct">✓ <span data-en>No commission · Book direct</span><span data-es>Sin comisión · Reserva directa</span></p>
     </div>
   </div>
@@ -858,7 +949,7 @@
           ? '<strong>Importante:</strong> Tu reserva no est&aacute; confirmada hasta que el propietario te contacte con una confirmaci&oacute;n.'
           : '<strong>Please note:</strong> Your booking is not confirmed until the owner contacts you with a confirmation.')
       + '</p>'
-      + '<p>' + (isEs ? 'Te contactaremos por WhatsApp o email en menos de 3 horas.' : 'We will contact you via WhatsApp or email within 3 hours.') + '</p>'
+      + '<p>' + (isEs ? 'Te contactaremos por WhatsApp o email en menos de 24 horas.' : 'We will contact you via WhatsApp or email within 24 hours.') + '</p>'
       + '<p style="font-size:0.8rem;color:#aaa;margin-top:1rem;">' + (isEs ? 'Fecha recibida' : 'Date received') + ': ' + dateReceived + '</p>'
       + '<button class="btn-submit" style="margin-top:1.5rem;" onclick="closeBookingModal()">'
       + (isEs ? 'Cerrar' : 'Close') + '</button>'
