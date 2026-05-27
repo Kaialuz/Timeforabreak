@@ -1150,24 +1150,6 @@
   // Init language after all functions are defined
   if(navigator.language.startsWith('es')) setLang('es'); else setLang('en');
   renderCals();
-    } catch(e) {
-      // Fallback: try via allorigins CORS proxy
-      try {
-        const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(ICAL_URL);
-        const res = await fetch(proxy);
-        const json = await res.json();
-        parseICal(json.contents);
-        renderCals();
-      } catch(e2) {
-        // If both fail, just render with no booked dates
-        renderCals();
-        console.warn('Could not load iCal:', e2);
-      }
-    }
-  }
-
-  renderCals(); // Initial render (no booked dates yet)
-  loadCalendar(); // Then fetch real availability
 
 </script>
 </body>
