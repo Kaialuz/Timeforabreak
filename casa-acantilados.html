@@ -109,11 +109,15 @@
   .calendar-section{padding:1.5rem 0;border-top:1px solid var(--sand);margin-top:1rem;}
   .cal-two-col{display:grid;grid-template-columns:1fr 1fr;gap:2rem;}
   .cal-month-block{min-width:0;}
-  .cal-month-title{font-size:1rem;font-weight:600;color:var(--navy);text-align:center;margin-bottom:0.75rem;}
+  .cal-month-title{font-size:1rem;font-weight:600;color:var(--navy);text-align:center;margin-bottom:0.75rem;display:block;}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;}
   .cal-day-name{text-align:center;font-size:0.65rem;letter-spacing:0.05em;text-transform:uppercase;color:var(--mid);padding:0.35rem 0;font-weight:600;}
   .cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:0.82rem;cursor:pointer;transition:background 0.12s,color 0.12s;color:var(--navy);border-radius:0;position:relative;-webkit-tap-highlight-color:transparent;user-select:none;}
-  .cal-day:hover:not(.empty):not(.booked):not(.past){background:#fde8cc;}
+  .cal-day:hover:not(.empty):not(.booked):not(.past):not(.too-close){background:#fde8cc;}
+  .cal-day.too-close{color:#c8c8c8;cursor:not-allowed;}
+  .cal-day.too-close:hover{background:transparent;}
+  #cal-min-msg{font-size:0.78rem;color:var(--mid);text-align:center;margin-top:0.7rem;min-height:1.2em;transition:opacity 0.2s;}
+  #cal-min-msg strong{color:var(--navy);}
   .cal-day.empty{cursor:default;pointer-events:none;}
   /* Past dates: greyed out, not clickable */
   .cal-day.past{color:#d0d0d0;cursor:default;pointer-events:none;opacity:0.5;}
@@ -494,21 +498,18 @@
     <!-- Calendar -->
     <div class="calendar-section">
       <div class="sec-label"><span data-en>Availability</span><span data-es>Disponibilidad</span></div>
+      <div class="cal-nav-row" style="margin-bottom:0.5rem;">
+        <button class="cal-nav" id="calNavPrev" onclick="changeMonth(-1)">‹</button>
+        <div style="flex:1"></div>
+        <button class="cal-nav" id="calNavNext" onclick="changeMonth(1)">›</button>
+      </div>
       <div class="cal-two-col">
         <div class="cal-month-block" id="calBlock1">
-          <div class="cal-nav-row">
-            <button class="cal-nav" onclick="changeMonth(-1)">‹</button>
-            <span class="cal-month-title" id="calTitle1"></span>
-            <div style="width:32px"></div>
-          </div>
+          <div class="cal-month-title" id="calTitle1"></div>
           <div class="cal-grid" id="calGrid1"></div>
         </div>
         <div class="cal-month-block" id="calBlock2">
-          <div class="cal-nav-row">
-            <div style="width:32px"></div>
-            <span class="cal-month-title" id="calTitle2"></span>
-            <button class="cal-nav" onclick="changeMonth(1)">›</button>
-          </div>
+          <div class="cal-month-title" id="calTitle2"></div>
           <div class="cal-grid" id="calGrid2"></div>
         </div>
       </div>
@@ -517,6 +518,7 @@
         <span><span class="leg-dot" style="background:#ddd"></span> <span data-en>Booked</span><span data-es>Ocupado</span></span>
         <span><span class="leg-dot" style="background:var(--orange)"></span> <span data-en>Your selection</span><span data-es>Tu selección</span></span>
       </div>
+      <div id="cal-min-msg"></div>
     </div>
 
     <!-- Map -->
@@ -1036,6 +1038,7 @@
     renderOneCal('calGrid2','calTitle2', next.getFullYear(), next.getMonth(), months, days);
     applyCalHighlight();
     updateMobileCalView();
+    updateNavButtons();
   }
 
   function updateMobileCalView() {
@@ -1052,7 +1055,7 @@
     }
   }
 
-  window.addEventListener('resize', updateMobileCalView);
+  window.addEventListener('resize', function(){ updateMobileCalView(); updateNavButtons(); });
 
   function renderOneCal(gridId, titleId, y, m, months, days) {
     document.getElementById(titleId).textContent = months[m]+' '+y;
@@ -1096,18 +1099,44 @@
     }
   }
 
+  var CAL_MIN_NIGHTS = 3;
+
+  function calMinMsg(msg) {
+    var el = document.getElementById('cal-min-msg');
+    if (!el) return;
+    el.innerHTML = msg || '';
+  }
+
+  function dateAddDays(dateKey, n) {
+    var d = new Date(dateKey); d.setDate(d.getDate() + n); return d.toISOString().split('T')[0];
+  }
+
   function calDayClick(dateKey, el) {
     if(el.classList.contains('booked')||el.classList.contains('empty')||el.classList.contains('past')) return;
     if(!calPickingEnd || !calStart || dateKey <= calStart) {
-      // Start new range
       calStart = dateKey;
       calEnd = null;
       calPickingEnd = true;
+      var lang = document.documentElement.getAttribute('data-lang')||'en';
+      calMinMsg(lang==='es'
+        ? '&#128197; Selecciona tu fecha de salida &nbsp;·&nbsp; <strong>Estancia mínima: ' + CAL_MIN_NIGHTS + ' noches</strong>'
+        : '&#128197; Select your check-out date &nbsp;·&nbsp; <strong>Minimum stay: ' + CAL_MIN_NIGHTS + ' nights</strong>');
     } else {
-      // End range
+      var nights = Math.round((new Date(dateKey) - new Date(calStart)) / 86400000);
+      if (nights < CAL_MIN_NIGHTS) {
+        calStart = dateKey;
+        calEnd = null;
+        calPickingEnd = true;
+        var lang = document.documentElement.getAttribute('data-lang')||'en';
+        calMinMsg(lang==='es'
+          ? '&#128197; Selecciona tu fecha de salida &nbsp;·&nbsp; <strong>Estancia mínima: ' + CAL_MIN_NIGHTS + ' noches</strong>'
+          : '&#128197; Select your check-out date &nbsp;·&nbsp; <strong>Minimum stay: ' + CAL_MIN_NIGHTS + ' nights</strong>');
+        applyCalHighlight();
+        return;
+      }
       calEnd = dateKey;
       calPickingEnd = false;
-      // Sync to form if open
+      calMinMsg('');
       var ci = document.getElementById('bf-checkin');
       var co = document.getElementById('bf-checkout');
       if(ci) ci.value = calStart;
@@ -1118,9 +1147,10 @@
 
   function applyCalHighlight() {
     document.querySelectorAll('.cal-day').forEach(function(el){
-      el.classList.remove('sel-start','sel-end','sel-range');
+      el.classList.remove('sel-start','sel-end','sel-range','too-close');
     });
     if(!calStart) return;
+    var minEnd = dateAddDays(calStart, CAL_MIN_NIGHTS);
     document.querySelectorAll('.cal-day[data-date]').forEach(function(el){
       var k = el.dataset.date;
       if(calEnd) {
@@ -1130,21 +1160,53 @@
         else if(k>calStart && k<calEnd){ el.classList.add('sel-range'); }
       } else {
         if(k===calStart){ el.classList.add('sel-start','sel-end'); }
+        else if(k > calStart && k < minEnd){ el.classList.add('too-close'); }
       }
     });
   }
 
+
+  var calOrigin = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
   function changeMonth(dir) {
     var isMobile = window.innerWidth <= 640;
+    var proposed;
     if(isMobile) {
-      // On mobile, step through the two visible months first
       calMobileMonth += dir;
-      if(calMobileMonth < 0) { calMobileMonth = 0; calBase = new Date(calBase.getFullYear(), calBase.getMonth()-1, 1); }
-      else if(calMobileMonth > 1) { calMobileMonth = 1; calBase = new Date(calBase.getFullYear(), calBase.getMonth()+1, 1); }
+      if(calMobileMonth < 0) {
+        calMobileMonth = 0;
+        proposed = new Date(calBase.getFullYear(), calBase.getMonth()-1, 1);
+      } else if(calMobileMonth > 1) {
+        calMobileMonth = 1;
+        proposed = new Date(calBase.getFullYear(), calBase.getMonth()+1, 1);
+      } else {
+        proposed = calBase;
+      }
     } else {
-      calBase = new Date(calBase.getFullYear(), calBase.getMonth()+dir, 1);
+      proposed = new Date(calBase.getFullYear(), calBase.getMonth()+dir, 1);
     }
+    var minBase = new Date(calOrigin);
+    var maxBase = new Date(calOrigin.getFullYear(), calOrigin.getMonth()+11, 1);
+    if(proposed < minBase) proposed = minBase;
+    if(proposed > maxBase) proposed = maxBase;
+    calBase = proposed;
     renderCals();
+    updateNavButtons();
+  }
+
+  function updateNavButtons() {
+    var isMobile = window.innerWidth <= 640;
+    var minBase = new Date(calOrigin);
+    var prev = document.getElementById('calNavPrev');
+    var next = document.getElementById('calNavNext');
+    if(!prev || !next) return;
+    var effectiveMax = isMobile
+      ? new Date(calOrigin.getFullYear(), calOrigin.getMonth()+11, 1)
+      : new Date(calOrigin.getFullYear(), calOrigin.getMonth()+10, 1);
+    prev.disabled = calBase <= minBase;
+    next.disabled = calBase >= effectiveMax;
+    prev.style.opacity = prev.disabled ? '0.3' : '1';
+    next.style.opacity = next.disabled ? '0.3' : '1';
   }
 
   // Init language after all functions are defined
