@@ -975,7 +975,7 @@
     // Reset reCAPTCHA
     if (recaptchaWidgetId !== null) { grecaptcha.reset(recaptchaWidgetId); } else { try { grecaptcha.reset(); } catch(e){} }
 
-    // Show confirmation screen FIRST
+    // Show confirmation screen inside the modal
     var lang = document.documentElement.getAttribute('data-lang') || 'en';
     var isEs = lang === 'es';
     document.getElementById('bookingFormBody').innerHTML =
@@ -989,7 +989,7 @@
       + '</p>'
       + '<p>' + (isEs ? 'Te contactaremos por WhatsApp o email en menos de 24 horas.' : 'We will contact you via WhatsApp or email within 24 hours.') + '</p>'
       + '<p style="font-size:0.8rem;color:#aaa;margin-top:1rem;">' + (isEs ? 'Fecha recibida' : 'Date received') + ': ' + dateReceived + '</p>'
-      + '<button class="btn-submit" style="margin-top:1.5rem;" onclick="closeBookingModal()">'
+      + '<button class="btn-submit" style="margin-top:1.5rem;" onclick="window.location.href=\'timeforabreak.html\'">'
       + (isEs ? 'Cerrar' : 'Close') + '</button>'
       + '</div>';
   }
